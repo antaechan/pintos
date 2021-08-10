@@ -24,6 +24,10 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of processes in THREAD_BLOCKED state, that is, processes
+   that are sleeping and waiting for function "thread_unblock" */
+static struct list wait_list;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -585,3 +589,18 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+void thread_sleep(int64_t ticks)
+{
+  enum intr_level old_level = intr_disable();
+  
+  struct thread *target = thread_current();
+  
+  ASSERT(target != idle_thread);
+  
+  thread_block();
+  list_remove(&target->elem);
+  list_push_back(&wait_list, &target->elem);
+  
+  intr_set_level(old_level);
+}
