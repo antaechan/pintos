@@ -217,7 +217,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   /*priority schedule*/
-  what_is_prior();
+ cmp_max_priority ();
   return tid;
 }
 
@@ -355,7 +355,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  what_is_prior();
+ cmp_max_priority ();
 }
 
 /* Returns the current thread's priority. */
@@ -644,7 +644,7 @@ bool thread_priority_comparing(const struct list_elem *first, const struct list_
   return (list_entry(first, struct thread, elem)->priority) > (list_entry(second, struct thread, elem)->priority); 
 }
 
-void what_is_prior(void){
+void cmp_max_priority (void){
   if (!list_empty (&ready_list)){
     if (thread_current()->priority < list_entry (list_front(&ready_list), struct thread, elem)->priority){
       thread_yield();

@@ -144,6 +144,6 @@ void thread_awake (int64_t ticks);
 int64_t get_next_tick_to_awake(void);
 
 bool thread_priority_comparing (const struct list_elem *first, const struct list_elem *second, void *aux UNUSED);
-void what_is_prior(void);
+void cmp_max_priority (void);
 
 #endif /* threads/thread.h */
