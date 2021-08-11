@@ -217,11 +217,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   /*priority schedule*/
-<<<<<<< HEAD
-  cmp_max_priority ();
-=======
   cmp_max_priority();
->>>>>>> 6fb46d7bc2331a7705a60a98eb99ea7380ef0ae2
   return tid;
 }
 
@@ -359,11 +355,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-<<<<<<< HEAD
   cmp_max_priority ();
-=======
-  cmp_max_priority();
->>>>>>> 6fb46d7bc2331a7705a60a98eb99ea7380ef0ae2
 }
 
 /* Returns the current thread's priority. */
