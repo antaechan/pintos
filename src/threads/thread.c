@@ -19,7 +19,7 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
-#define MIN(x, y) x < y ? x : y;
+#define MIN(x, y) (x < y) ? x : y;
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -599,11 +599,11 @@ void thread_sleep(int64_t ticks)
   
   struct thread *target = thread_current();
   ASSERT(target != idle_thread);
-  next_tick_to_awake = MIN(target->walkup_ticks = ticks, next_tick_to_awake);
+  target->wakeup_ticks = ticks;
+  next_tick_to_awake = MIN(ticks, next_tick_to_awake);
   
-  thread_block();
-  list_remove(&target->elem);
   list_push_back(&wait_list, &target->elem);
+  thread_block();
   
   intr_set_level(old_level);
 }
@@ -613,17 +613,17 @@ void thread_awake(int64_t ticks)
   next_tick_to_awake = INT64_MAX;
   enum intr_level old_level = intr_disable();
   struct list_elem *walk = list_begin(&wait_list);
-  while( walk != list_end(&wait_list) )
+  while(walk != list_end(&wait_list))
   {
     struct thread *target = list_entry(walk, struct thread, elem);
-    if(target->walkup_ticks <= ticks)
+    if(target->wakeup_ticks <= ticks)
     {
       walk = list_remove(&target->elem);
       thread_unblock(target);
     }
     else
     {
-      next_tick_to_awake = MIN(target->walkup_ticks, next_tick_to_awake);
+      next_tick_to_awake = MIN(target->wakeup_ticks, next_tick_to_awake);
       walk = list_next(walk);
     }
   }
@@ -631,7 +631,6 @@ void thread_awake(int64_t ticks)
   intr_set_level(old_level);
 }
 
-int64_t get_next_tick_to_awake()
-{
+int64_t get_next_tick_to_awake(){
   return next_tick_to_awake;
 }
