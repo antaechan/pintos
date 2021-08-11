@@ -92,6 +92,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+    int64_t wakeup_tick;                /* time to wake up */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -139,5 +140,7 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void thread_sleep (int64_t ticks);
+void thread_awake (int64_t ticks);
+int64_t get_next_tick_to_awake();
 
 #endif /* threads/thread.h */

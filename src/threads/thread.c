@@ -19,6 +19,7 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
+#define MIN(x, y) x < y ? x : y;
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -27,6 +28,7 @@ static struct list ready_list;
 /* List of processes in THREAD_BLOCKED state, that is, processes
    that are sleeping and waiting for function "thread_unblock" */
 static struct list wait_list;
+static int64_t next_tick_to_awake;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -96,6 +98,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&wait_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -595,12 +598,40 @@ void thread_sleep(int64_t ticks)
   enum intr_level old_level = intr_disable();
   
   struct thread *target = thread_current();
-  
   ASSERT(target != idle_thread);
+  next_tick_to_awake = MIN(target->walkup_ticks = ticks, next_tick_to_awake);
   
   thread_block();
   list_remove(&target->elem);
   list_push_back(&wait_list, &target->elem);
   
   intr_set_level(old_level);
+}
+
+void thread_awake(int64_t ticks)
+{
+  next_tick_to_awake = INT64_MAX;
+  enum intr_level old_level = intr_disable();
+  struct list_elem *walk = list_begin(&wait_list);
+  while( walk != list_end(&wait_list) )
+  {
+    struct thread *target = list_entry(walk, struct thread, elem);
+    if(target->walkup_ticks <= ticks)
+    {
+      walk = list_remove(&target->elem);
+      thread_unblock(target);
+    }
+    else
+    {
+      next_tick_to_awake = MIN(target->walkup_ticks, next_tick_to_awake);
+      walk = list_next(walk);
+    }
+  }
+
+  intr_set_level(old_level);
+}
+
+int64_t get_next_tick_to_awake()
+{
+  return next_tick_to_awake;
 }
