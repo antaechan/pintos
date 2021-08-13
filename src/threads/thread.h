@@ -94,6 +94,11 @@ struct thread
     struct list_elem elem;              /* List element. */
     int64_t wakeup_ticks;               /* time to wake up */
 
+   int init_priority;
+   struct lock *wait_on_lock;
+   struct list_elem donation_elem;
+   struct list donations;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -146,4 +151,7 @@ int64_t get_next_tick_to_awake(void);
 bool thread_priority_comparing (const struct list_elem *first, const struct list_elem *second, void *aux UNUSED);
 void cmp_max_priority (void);
 
+void donate_priority(void);
+void update_donations(struct lock *lock);
+void refresh_priority(void);
 #endif /* threads/thread.h */

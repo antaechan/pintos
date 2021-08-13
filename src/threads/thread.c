@@ -19,7 +19,9 @@
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
-#define MIN(x, y) (x < y) ? x : y;
+#define MAX(x, y) (x > y) ? x : y
+#define MIN(x, y) (x < y) ? x : y
+#define DONATION_DEPTH  9
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -354,7 +356,8 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  thread_current ()->init_priority = new_priority;
+  refresh_priority();
   cmp_max_priority ();
 }
 
@@ -481,6 +484,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  t->init_priority = priority;
+  list_init(&t->donations);
+  t->wait_on_lock = NULL;
+
   list_push_back (&all_list, &t->allelem);
 }
 
@@ -653,4 +661,41 @@ void cmp_max_priority(void){
   else{
     return;
   }
+}
+
+void donate_priority(void)
+{
+  struct thread *t = thread_current();
+  int cur_priority = t->priority;
+  int depth = 0;
+
+  while(depth < DONATION_DEPTH){ /* nested donation */
+    depth++;
+    if(t->wait_on_lock == NULL) break;
+    t = t->wait_on_lock->holder;
+    t->priority = cur_priority;
+  }
+}
+
+void update_donations(struct lock *lock)
+{
+  struct thread *t = thread_current();
+  struct list_elem *walk = list_begin(&t->donations);
+  while(walk != list_end(&t->donations)){
+      if(list_entry(walk, struct thread, donation_elem)->wait_on_lock 
+        == lock)  walk = list_remove(walk);
+      else walk = list_next(walk);
+  }
+}
+
+void refresh_priority(void)
+{
+  struct thread *t = thread_current();
+  t->priority = t->init_priority;
+
+  if(list_empty(&t->donations)) return;
+  list_sort(&t->donations, thread_priority_comparing, NULL);
+  int64_t high_priority = list_entry(list_begin(&t->donations),
+   struct thread, donation_elem)->priority;
+  t->priority = MAX(high_priority, t->priority);
 }
