@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -22,6 +23,11 @@
 #define MAX(x, y) (x > y) ? x : y
 #define MIN(x, y) (x < y) ? x : y
 #define DONATION_DEPTH  9
+#define NICE_DEFAULT  0
+#define RECENT_CPU_DEFAULT  0
+#define LOAD_AVG_DEFAULT  0
+
+int load_avg;
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -118,7 +124,7 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
+  load_avg = LOAD_AVG_DEFAULT;
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -485,6 +491,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  /* mlfqs activate */
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
+
   t->init_priority = priority;
   list_init(&t->donations);
   t->wait_on_lock = NULL;
@@ -698,4 +708,34 @@ void refresh_priority(void)
   int64_t high_priority = list_entry(list_begin(&t->donations),
    struct thread, donation_elem)->priority;
   t->priority = MAX(high_priority, t->priority);
+}
+
+/* update the priority of argument thread *t */
+void update_priority (struct thread *t)
+{
+  
+}
+
+/* update the recent_cpu of argument thread *t */
+void update_recent_cpu (struct thread *t)
+{
+
+}
+
+/* update the load_avg of argument thread *t */
+void update_load_avg (void)
+{
+
+}
+
+/* increment the priority of current running thread */
+void mlfqs_increment(void)
+{
+
+}
+
+/* recalculate priority, recent_cpu of all thread */
+void mlfqs_recalc(void)
+{
+
 }

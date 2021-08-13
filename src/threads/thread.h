@@ -99,6 +99,9 @@ struct thread
    struct list_elem donation_elem;
    struct list donations;
 
+   int nice;                            /* member for mlfqs */
+   int recent_cpu;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -154,4 +157,12 @@ void cmp_max_priority (void);
 void donate_priority(void);
 void update_donations(struct lock *lock);
 void refresh_priority(void);
+
+/*mlfqs part*/
+void update_priority (struct thread *t);
+void update_recent_cpu (struct thread *t);
+void update_load_avg (void);
+void mlfqs_increment(void);
+void mlfqs_recalc(void);
+
 #endif /* threads/thread.h */
