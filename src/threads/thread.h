@@ -4,7 +4,6 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -163,6 +162,7 @@ void update_priority (struct thread *t);
 void update_recent_cpu (struct thread *t);
 void update_load_avg (void);
 void mlfqs_increment(void);
-void mlfqs_recalc(void);
+void recalculate_recent_cpu(void);
+void recalculate_priority(void);
 
 #endif /* threads/thread.h */

@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed_point.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -362,7 +363,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->init_priority = new_priority;
+  struct thread *t = thread_current ();
+  if(thread_mlfqs) return; /* mlfqs activate */
+
+  t->init_priority = new_priority;
   refresh_priority();
   cmp_max_priority ();
 }
@@ -378,31 +382,43 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  enum intr_level old_level = intr_disable();
+  struct thread *t = thread_current();
+  t->nice = nice;
+  update_priority(t);
+  cmp_max_priority();
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  int nice = thread_current()->nice;
+  intr_set_level(old_level);
+  return nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  int result = fp_to_int(mul_fp_int(load_avg, 100));
+  intr_set_level(old_level);
+  return result;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  struct thread *t = thread_current();
+  int result = fp_to_int(mul_fp_int(t->recent_cpu, 100));
+  intr_set_level(old_level);
+  return result;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -664,12 +680,10 @@ bool thread_priority_comparing(const struct list_elem *first, const struct list_
 
 void cmp_max_priority(void){
   if (!list_empty (&ready_list)){
+    list_sort(&ready_list, thread_priority_comparing, NULL);
     if (thread_current()->priority < list_entry (list_front(&ready_list), struct thread, elem)->priority){
       thread_yield();
     }
-  }
-  else{
-    return;
   }
 }
 
@@ -713,29 +727,65 @@ void refresh_priority(void)
 /* update the priority of argument thread *t */
 void update_priority (struct thread *t)
 {
+  if(t == idle_thread) return;
+  int result = t->recent_cpu;
+  result = div_fp_by_int(result, 4);
+  result = sub_fp(int_to_fp(PRI_MAX), result);
+  result = sub_fp_int(result, t->nice*2);
+  t->priority = fp_to_int(result);
   
 }
 
 /* update the recent_cpu of argument thread *t */
 void update_recent_cpu (struct thread *t)
 {
+  if(t == idle_thread) return;
+  int result = mul_fp_int(load_avg, 2);
+  int temp = add_fp_int(result, 1);
+  result = div_fp(result, temp);
+  result = mul_fp(result, t->recent_cpu);
+  t->recent_cpu = add_fp_int(result, t->nice);
 
 }
 
-/* update the load_avg of argument thread *t */
+/* update the load_avg */
 void update_load_avg (void)
 {
-
+  int ready_threads = list_size(&ready_list);
+  if(thread_current() != idle_thread) ready_threads++;
+  int result = mul_fp(div_fp(int_to_fp(59), int_to_fp(60)), load_avg);
+  int temp = mul_fp_int(div_fp(int_to_fp(1), int_to_fp(60)), ready_threads);
+  load_avg = add_fp(result, temp);
 }
 
 /* increment the priority of current running thread */
 void mlfqs_increment(void)
 {
-
+  struct thread *t = thread_current();
+  if(t == idle_thread) return;
+  t->recent_cpu = add_fp_int(t->recent_cpu, 1);
 }
 
 /* recalculate priority, recent_cpu of all thread */
-void mlfqs_recalc(void)
+void recalculate_recent_cpu(void)
 {
+  struct list_elem *walk;
+  walk = list_begin(&all_list);
+  while(walk != list_end(&all_list)){
+    struct thread *t = list_entry(walk, struct thread, allelem);
+    update_recent_cpu(t);
+    walk = list_next(walk);
+  }
+}
 
+/* recalculate priority, recent_cpu of all thread */
+void recalculate_priority(void)
+{
+  struct list_elem *walk;
+  walk = list_begin(&all_list);
+  while(walk != list_end(&all_list)){
+    struct thread *t = list_entry(walk, struct thread, allelem);
+    update_priority(t);
+    walk = list_next(walk);
+  }
 }
