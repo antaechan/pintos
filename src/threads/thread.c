@@ -758,7 +758,7 @@ void update_load_avg (void)
   load_avg = add_fp(result, temp);
 }
 
-/* increment the priority of current running thread */
+/* increment recent_cpu of current running thread */
 void mlfqs_increment(void)
 {
   struct thread *t = thread_current();
@@ -766,7 +766,7 @@ void mlfqs_increment(void)
   t->recent_cpu = add_fp_int(t->recent_cpu, 1);
 }
 
-/* recalculate priority, recent_cpu of all thread */
+/* recalculate recent_cpu of all thread */
 void recalculate_recent_cpu(void)
 {
   struct list_elem *walk;
@@ -778,7 +778,7 @@ void recalculate_recent_cpu(void)
   }
 }
 
-/* recalculate priority, recent_cpu of all thread */
+/* recalculate priority of all thread */
 void recalculate_priority(void)
 {
   struct list_elem *walk;
