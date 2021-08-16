@@ -30,6 +30,9 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+  // make token to put in "thread_create"
+  char *token;
+  char *save_ptr;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -38,8 +41,11 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+
+  token = strtok_r(file_name, " ", &save_ptr);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  // modifying file_name to token
+  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -54,12 +60,23 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  //only file name parsing
+  char* fname;
+  char* save_ptr;
+  fname = strtok_r(file_name, " ", &save_ptr);
+  
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
+
+  // if success, construct esp
+  if(success){
+    construct_esp(file_name, &if_.esp);
+  }
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -88,6 +105,9 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //for debugging
+  while(1)
+
   return -1;
 }
 
@@ -462,4 +482,77 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+void construct_esp(char *fn, void **esp) {
+  char save_fn[256];
+  int len_fn;
+  int argc;
+  char *token;
+  char *ptr;
+  char **argv;
+  char *addr_esp[16];
+  int i;
+  int len_token;
+  int total_len;
+  int len_argv;
+  int word_align;
+
+  len_fn = strlen(fn) + 1;
+  total_len = 0;
+
+  memcpy(save_fn, fn, len_fn);
+  token = strtok_r(save_fn, " ", &ptr);
+  
+  //caculate argc
+  while (token != NULL) {
+    argc += 1;
+    token = strtok_r(NULL, " ", &ptr);
+  }
+
+  //store argv
+  strlcpy(save_fn, fn, len_fn);
+  for (i = 0, token = strtok_r(save_fn, " ", &ptr); i < argc; i++, token = strtok_r(NULL, " ", &ptr)) {
+    len_token = strlen(token);
+    argv[i] = token;
+  }
+
+  //push argv[i][...]
+  for (i=argc-1; i>=0; i--){
+    len_argv = strlen(argv[i]) + 1;
+    total_len += len_argv;
+    *esp -= len_argv;
+    addr_esp[i] = (uint32_t *)*esp;
+    memcpy(*esp, argv[i], len_argv);
+  }
+
+  //push word align 
+  word_align = (total_len % 4) == 0 ? 0 : 4 - (total_len % 4);
+  *esp -= word_align;
+
+  //argv[argc], namely NULL
+  *esp -= 4;
+  *(int *)*esp = 0;
+
+  //argv[i]
+  for (i=argc-1; i>=0; i--){
+    *esp -= 4;
+    *(uint32_t **)*esp = addr_esp[i];
+  }
+
+  //argv
+  *esp -= 4;
+  *(uintptr_t **)*esp = *esp + 4;
+
+  //argc
+  *esp -= 4;
+  *(int *)*esp = argc;
+
+  //ret addr
+  *esp -= 4;
+  *(int *)*esp = 0;
+
+  //for debugging passing arguments
+  printf("your stack is like below\n");
+  hex_dump((uintptr_t)*esp, *esp, 0xc0000000-(uintptr_t)*esp, true);
 }
