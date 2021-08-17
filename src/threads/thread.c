@@ -29,6 +29,7 @@
 #define LOAD_AVG_DEFAULT  0
 
 int load_avg;
+bool thread_start_flag = false;
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -121,6 +122,7 @@ thread_init (void)
 void
 thread_start (void) 
 {
+  thread_start_flag = true;
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
@@ -239,6 +241,7 @@ thread_create (const char *name, int priority,
 void
 thread_block (void) 
 {
+  if(!thread_start_flag) return;
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -328,6 +331,7 @@ thread_exit (void)
 void
 thread_yield (void) 
 {
+  if(!thread_start_flag) return;
   struct thread *cur = thread_current ();
   enum intr_level old_level;
   

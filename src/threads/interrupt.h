@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+bool in_external_intr;   /* Are we processing an external interrupt? */
 /* Interrupts on or off? */
 enum intr_level 
   {
