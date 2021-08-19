@@ -549,75 +549,75 @@ install_page (void *upage, void *kpage, bool writable)
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
-void construct_esp(char *fn, void **esp) {
-  char save_fn[256];
-  int len_fn;
-  int argc;
-  char *token;
-  char *ptr;
-  char **argv;
-  char *addr_esp[16];
-  int i;
-  int len_token;
-  int total_len;
-  int len_argv;
-  int word_align;
+// void construct_esp(char *fn, void **esp) {
+//   char save_fn[256];
+//   int len_fn;
+//   int argc;
+//   char *token;
+//   char *ptr;
+//   char **argv;
+//   char *addr_esp[16];
+//   int i;
+//   int len_token;
+//   int total_len;
+//   int len_argv;
+//   int word_align;
 
-  len_fn = strlen(fn) + 1;
-  total_len = 0;
+//   len_fn = strlen(fn) + 1;
+//   total_len = 0;
 
-  memcpy(save_fn, fn, len_fn);
-  token = strtok_r(save_fn, " ", &ptr);
+//   memcpy(save_fn, fn, len_fn);
+//   token = strtok_r(save_fn, " ", &ptr);
   
-  //caculate argc
-  while (token != NULL) {
-    argc += 1;
-    token = strtok_r(NULL, " ", &ptr);
-  }
+//   //caculate argc
+//   while (token != NULL) {
+//     argc += 1;
+//     token = strtok_r(NULL, " ", &ptr);
+//   }
 
-  //store argv
-  strlcpy(save_fn, fn, len_fn);
-  for (i = 0, token = strtok_r(save_fn, " ", &ptr); i < argc; i++, token = strtok_r(NULL, " ", &ptr)) {
-    len_token = strlen(token);
-    argv[i] = token;
-  }
+//   //store argv
+//   strlcpy(save_fn, fn, len_fn);
+//   for (i = 0, token = strtok_r(save_fn, " ", &ptr); i < argc; i++, token = strtok_r(NULL, " ", &ptr)) {
+//     len_token = strlen(token);
+//     argv[i] = token;
+//   }
 
-  //push argv[i][...]
-  for (i=argc-1; i>=0; i--){
-    len_argv = strlen(argv[i]) + 1;
-    total_len += len_argv;
-    *esp -= len_argv;
-    addr_esp[i] = (uint32_t *)*esp;
-    memcpy(*esp, argv[i], len_argv);
-  }
+//   //push argv[i][...]
+//   for (i=argc-1; i>=0; i--){
+//     len_argv = strlen(argv[i]) + 1;
+//     total_len += len_argv;
+//     *esp -= len_argv;
+//     addr_esp[i] = (uint32_t *)*esp;
+//     memcpy(*esp, argv[i], len_argv);
+//   }
 
-  //push word align 
-  word_align = (total_len % 4) == 0 ? 0 : 4 - (total_len % 4);
-  *esp -= word_align;
+//   //push word align 
+//   word_align = (total_len % 4) == 0 ? 0 : 4 - (total_len % 4);
+//   *esp -= word_align;
 
-  //argv[argc], namely NULL
-  *esp -= 4;
-  *(int *)*esp = 0;
+//   //argv[argc], namely NULL
+//   *esp -= 4;
+//   *(int *)*esp = 0;
 
-  //argv[i]
-  for (i=argc-1; i>=0; i--){
-    *esp -= 4;
-    *(uint32_t **)*esp = addr_esp[i];
-  }
+//   //argv[i]
+//   for (i=argc-1; i>=0; i--){
+//     *esp -= 4;
+//     *(uint32_t **)*esp = addr_esp[i];
+//   }
 
-  //argv
-  *esp -= 4;
-  *(uintptr_t **)*esp = *esp + 4;
+//   //argv
+//   *esp -= 4;
+//   *(uintptr_t **)*esp = *esp + 4;
 
-  //argc
-  *esp -= 4;
-  *(int *)*esp = argc;
+//   //argc
+//   *esp -= 4;
+//   *(int *)*esp = argc;
 
-  //ret addr
-  *esp -= 4;
-  *(int *)*esp = 0;
+//   //ret addr
+//   *esp -= 4;
+//   *(int *)*esp = 0;
 
-  //for debugging passing arguments
-  printf("your stack is like below\n");
-  hex_dump((uintptr_t)*esp, *esp, 0xc0000000-(uintptr_t)*esp, true);
-}
+//   //for debugging passing arguments
+//   printf("your stack is like below\n");
+//   hex_dump((uintptr_t)*esp, *esp, 0xc0000000-(uintptr_t)*esp, true);
+// }
